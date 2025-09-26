@@ -2,7 +2,6 @@
 let input = '0';
 let operator = '';
 let previousInput = '';
-console.log("Hola");
 function calcDisplay(values) {
     let update = false;
     if (['+', '-', '*', '/'].includes(values)) {
@@ -29,6 +28,18 @@ function calcDisplay(values) {
         }
         else if (values === "clear") {
             input = '';
+        }
+        else if (values === '=') {
+            calculate();
+            update = false;
+        }
+        else if (values === 'hex') {
+            hexa();
+            update = false;
+        }
+        else if (values === 'bin') {
+            binary();
+            update = false;
         }
         else {
             input += values;
@@ -58,13 +69,106 @@ function deleteLast() {
     }
     updateScreen();
 }
+function calculate() {
+    const numbers = [];
+    const operators = [];
+    let currentNumber = '';
+    for (let i = 0; i < input.length; i++) {
+        const char = input[i];
+        if (!isNaN(Number(char)) || char === '.') {
+            currentNumber += char;
+        }
+        else if (['+', '-', '*', '/'].includes(char)) {
+            if (currentNumber) {
+                numbers.push(Number(currentNumber));
+                currentNumber = '';
+            }
+            operators.push(char);
+        }
+    }
+    if (currentNumber) {
+        numbers.push(Number(currentNumber));
+    }
+    if (numbers.length === 0) {
+        throw new Error('No se ingresaron números válidos.');
+    }
+    let result = numbers[0];
+    for (let i = 0; i < operators.length; i++) {
+        const operator = operators[i];
+        const nextNumber = numbers[i + 1];
+        switch (operator) {
+            case '+':
+                result += nextNumber;
+                break;
+            case '-':
+                result -= nextNumber;
+                break;
+            case '*':
+                result *= nextNumber;
+                break;
+            case '/':
+                result /= nextNumber;
+                break;
+        }
+    }
+    input = result.toString();
+    updateScreen();
+}
+function binary() {
+    const number = parseFloat(input);
+    if (!isNaN(number)) {
+        input = Math.floor(number).toString(2);
+        updateScreen();
+    }
+    else {
+        input = 'Error';
+        updateScreen();
+    }
+}
+function hexa() {
+    const number = parseFloat(input);
+    if (!isNaN(number)) {
+        input = Math.floor(number).toString(16).toUpperCase();
+        updateScreen();
+    }
+    else {
+        input = 'Error';
+        updateScreen();
+    }
+}
 const buttons = document.querySelectorAll('.button');
 buttons.forEach((button) => {
     button.addEventListener('click', (event) => {
         const target = event.target;
         const value = target.value;
-        console.log(`Botón pulsado: ${value}`);
-        calcDisplay(value);
+        if (value !== undefined) {
+            calcDisplay(value);
+        }
     });
+});
+document.addEventListener('keydown', (event) => {
+    const key = event.key;
+    if (!isNaN(Number(key)) || ['+', '-', '*', '/'].includes(key)) {
+        calcDisplay(key);
+    }
+    else if (key === 'Backspace') {
+        deleteLast();
+    }
+    else if (key === 'Enter' || key === '=') {
+        calculate();
+    }
+    else if (key === 'b') {
+        binary();
+    }
+    else if (key === 'h') {
+        hexa();
+    }
+    else if (key === 'Escape' || key === 'c') {
+        input = '';
+        updateScreen();
+    }
+    else if (key === '.') {
+        calcDisplay(key);
+    }
 });
 //# sourceMappingURL=index.js.map
