@@ -1,3 +1,5 @@
+import { timer } from "../node_modules/rxjs/dist/types/internal/observable/timer";
+
 let input: string = '0';
 let operator: string = '';
 let previousInput: string = '';
@@ -172,3 +174,21 @@ document.addEventListener('keydown', (event) => {
         calcDisplay(key);
     }
 });
+
+function updateClockRxJS(): void {
+    const clockElement = document.getElementById('Hora');
+    if (!clockElement) {
+      console.error('No se encontró el elemento con ID "Hora".');
+      return;
+    }
+  
+    timer(0, 1000).subscribe(() => {
+      const now = new Date();
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      const seconds = now.getSeconds().toString().padStart(2, '0');
+      clockElement.textContent = `${hours}:${minutes}:${seconds}`;
+    });
+  }
+  
+  updateClockRxJS();
