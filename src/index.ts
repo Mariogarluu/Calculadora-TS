@@ -1,179 +1,163 @@
-import { timer } from "../node_modules/rxjs/dist/types/internal/observable/timer";
+import { fromEvent, debounceTime, map, timer } from 'rxjs';
 
-let input: string = '0';
+let currentInput: string = '0';
 let operator: string = '';
 let previousInput: string = '';
 
-function calcDisplay(values: string): void {
+function appendToDisplay(value: string): void {
     let update = false;
-
-    if (['+', '-', '*', '/'].includes(values)) {
-        if (input !== '0' && input !== '') {
-            if (previousInput !== '0' && previousInput !== '') {
-
-            } else {
-                update = true;
-                input += values;
+    if (['+', '-', '*', '/'].includes(value)) {
+        if (currentInput !== '0' && currentInput !== '') {
+            if (previousInput !== '' && operator !== '') {
+                calculate();
             }
+            previousInput = currentInput;
+            operator = value;
+            currentInput = '0';
         }
-    } 
-    else {
+    } else {
         update = true;
-        if (values === '.' && input.includes('.')) {
-            update = false;
-        } else if (input === '0' && values !== '.') {
-            input = values;
-        }
-        else if (values === "delete"){
-            deleteLast();
-            update = false;
-        }
-        else if(values === "clear"){
-            input = '';
-        } else if(values === '='){
-            calculate();
-            update = false;
-        } else if(values === 'hex'){
-            hexa();
-            update = false;
-        } else if(values === 'bin'){
-            binary();
-            update = false;
+        if (currentInput === '0' && value !== '.') {
+            currentInput = value;
         } else {
-            input += values;
+            currentInput += value;
         }
     }
     if (update) {
-        if (values !== "clear" && values !== "delete"){
-            updateScreen();
-        }
+        updateDisplay();
     }
 }
 
-function updateScreen(): void {
+function updateDisplay(): void {
     const display = document.getElementById('screen') as HTMLInputElement;
-    if (display) {
-        display.value = input;
-    } else {
-        console.error('No se encontró el elemento con ID "screen".');
-    }
+    if (display) display.value = currentInput;
+}
+
+function clearDisplay(): void {
+    currentInput = '0';
+    operator = '';
+    previousInput = '';
+    updateDisplay();
 }
 
 function deleteLast(): void {
-    if (Number(input) > 1){
-        input = input.slice(0, -1);
+    if (currentInput.length > 1) {
+        currentInput = currentInput.slice(0, -1);
+    } else {
+        currentInput = '0';
     }
-    else {
-        input = '';
-    }
-    updateScreen();
+    updateDisplay();
 }
 
 function calculate(): void {
-    const numbers: number[] = [];
-    const operators: string[] = [];
-    let currentNumber = '';
-
-    for (let i = 0; i < input.length; i++) {
-        const char = input[i];
-
-        if (!isNaN(Number(char)) || char === '.') {
-            currentNumber += char;
-        } else if (['+', '-', '*', '/'].includes(char!)) {
-            if (currentNumber) {
-                numbers.push(Number(currentNumber));
-                currentNumber = '';
-            }
-            operators.push(char!);
-        }
-    }
-
-    if (currentNumber) {
-        numbers.push(Number(currentNumber));
-    }
-
-    if (numbers.length === 0) {
-        throw new Error('No se ingresaron números válidos.');
-    }
-
-    let result = numbers[0]!;
-    for (let i = 0; i < operators.length; i++) {
-        const operator = operators[i];
-        const nextNumber = numbers[i + 1]!;
-
+    if (previousInput !== '' && currentInput !== '0' && currentInput !== '' && operator !== '') {
+        const prev = parseFloat(previousInput);
+        const current = parseFloat(currentInput);
+        let result: number;
+        
         switch (operator) {
             case '+':
-                result += nextNumber;
+                result = prev + current;
                 break;
             case '-':
-                result -= nextNumber;
+                result = prev - current;
                 break;
             case '*':
-                result *= nextNumber;
+                result = prev * current;
                 break;
             case '/':
-                result /= nextNumber;
+                if (current === 0) {
+                    alert('Error: División por cero');
+                    return;
+                }
+                result = prev / current;
                 break;
+            default:
+                return;
         }
-    }
-    
-    input = result.toString();
-    updateScreen();
-}
-
-function binary(): void{
-    const number = parseFloat(input);
-    if (!isNaN(number)) {
-        input = Math.floor(number).toString(2);
-        updateScreen();
-    } else {
-        input = 'Error';
-        updateScreen();
+        
+        currentInput = result.toString();
+        operator = '';
+        previousInput = '';
+        updateDisplay();
     }
 }
 
-function hexa(): void{
-    const number = parseFloat(input);
-    if (!isNaN(number)) {
-        input = Math.floor(number).toString(16).toUpperCase();
-        updateScreen();
-    } else {
-        input = 'Error';
-        updateScreen();
-    }
-}
-
-const buttons = document.querySelectorAll('.button');
-buttons.forEach((button) => {
-    button.addEventListener('click', (event) => {
-        const target = event.target as HTMLButtonElement;
-        const value = target.value;
-        if (value !== undefined) {
-            calcDisplay(value);
-        }
-    });
+document.addEventListener('DOMContentLoaded', () => {
+    updateDisplay();
+    setupEventListeners();
 });
 
-document.addEventListener('keydown', (event) => {
-    const key = event.key;
-
-    if (!isNaN(Number(key)) || ['+', '-', '*', '/'].includes(key!)) {
-        calcDisplay(key);
-    } else if (key === 'Backspace') {
-        deleteLast();
-    } else if (key === 'Enter' || key === '=') {
-        calculate();
-    } else if (key === 'b') {
-        binary();
-    } else if (key === 'h') {
-        hexa();
-    } else if (key === 'Escape' || key === 'c') {
-        input = '';
-        updateScreen();
-    } else if (key === '.') {
-        calcDisplay(key);
+function setupEventListeners(): void {
+    const buttonsContainer = document.querySelector('.buttons');
+    if (buttonsContainer) {
+        buttonsContainer.addEventListener('click', (event) => {
+            const target = event.target as HTMLButtonElement;
+            if (target.tagName === 'BUTTON') {
+                const value = target.value;
+                if (value === 'clear') {
+                    clearDisplay();
+                } else if (value === 'delete') {
+                    deleteLast();
+                } else if (value === '=') {
+                    calculate();
+                } else if (value === 'bin') {
+                    convertToBase(2);
+                } else if (value === 'hex') {
+                    convertToBase(16);
+                } else if (!isNaN(Number(value)) || value === '.' || ['+', '-', '*', '/'].includes(value)) {
+                    appendToDisplay(value);
+                }
+            }
+        });
     }
-});
+    setupKeyboardEvents();
+}
+
+function convertToBase(base: number): void {
+    const num = parseFloat(currentInput);
+    if (!isNaN(num)) {
+        if (base === 2) {
+            currentInput = num.toString(2);
+        } else if (base === 16) {
+            currentInput = num.toString(16).toUpperCase();
+        }
+        updateDisplay();
+    }
+}
+
+function setupKeyboardEvents(): void {
+    const keyboardEvents$ = fromEvent<KeyboardEvent>(document, 'keydown');
+    keyboardEvents$
+        .pipe(
+            debounceTime(50),
+            map(event => event.key)
+        )
+        .subscribe(key => {
+            switch (key) {
+                case '0': case '1': case '2': case '3': case '4':
+                case '5': case '6': case '7': case '8': case '9':
+                case '.':
+                    appendToDisplay(key);
+                    break;
+                case '+': case '-': case '*': case '/':
+                    appendToDisplay(key);
+                    break;
+                case 'Enter':
+                case '=':
+                    calculate();
+                    break;
+                case 'Escape':
+                case 'c':
+                case 'C':
+                    clearDisplay();
+                    break;
+                case 'Backspace':
+                    deleteLast();
+                    break;
+            }
+        });
+}
 
 function updateClockRxJS(): void {
     const clockElement = document.getElementById('Hora');
@@ -181,7 +165,6 @@ function updateClockRxJS(): void {
       console.error('No se encontró el elemento con ID "Hora".');
       return;
     }
-  
     timer(0, 1000).subscribe(() => {
       const now = new Date();
       const hours = now.getHours().toString().padStart(2, '0');
@@ -189,6 +172,5 @@ function updateClockRxJS(): void {
       const seconds = now.getSeconds().toString().padStart(2, '0');
       clockElement.textContent = `${hours}:${minutes}:${seconds}`;
     });
-  }
-  
-  updateClockRxJS();
+}
+updateClockRxJS();
